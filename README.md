@@ -2,7 +2,7 @@
 
 This project showcases a very basic blockchain implementation. You build and run the web server with gradle by issuing:
 
-    `gradle clean run`
+    gradle clean run
 
 and then you're free to call the HTTP endpoints with Postman, Curl or any other way you prefer. The server runs on `localhost:5050` by default.
 
@@ -71,7 +71,7 @@ Below the blockchain protocol is defined. Any clients must comply to it in their
 
 The hash of a block is produced by passing the block header to the SHA-256 algorithm. The block header, in turn, is produced as a concatenated string exactly like so:
 
-    `{index}{nonce}{timestamp}{prevHash}{transaction[0].id}{transaction[n-1].id}{transaction[n].id}`
+    {index}{nonce}{timestamp}{prevHash}{transaction[0].id}{transaction[n-1].id}{transaction[n].id}
 
 | Form field    | Type          | Description                     |
 |:------------- |:------------- |:------------------------------- |
