@@ -89,3 +89,15 @@ For each peer node:
 1. Verify for each block in the chain that
     1. The nonce produces a hash string that starts with "00"
     1. The produced hash it the same as the "prevHash" field in the next block
+
+
+## Topics to Discuss
+
+* What happens when a peer node has a longer chain than I do, but doesn't have all the transactions that are in my top block?
+* This implementation has a "pull" based synchronization strategy. Is that good or bad? What other strategies could be better? Why?
+* A single node in this implmentation is responsible both for managing transactions and "mining" new blocks. Is that really a good idea?
+* How long should a node be allowed to "mine" for a block? How will it know when it's time to bail out?
+* *Why* should a node engage in any mining at all? What are the incentives? Do they differ between different types of blockchain networks (public vs. consortium/private)?
+
+Please, feel free to rais any further topics or questions in the "Issues" section.
+
