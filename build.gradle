@@ -1,0 +1,20 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'io.ratpack:ratpack-gradle:1.5.4'
+    }
+}
+
+apply plugin: 'io.ratpack.ratpack-java'
+
+repositories {
+  jcenter()
+}
+
+dependencies {
+  runtime 'org.slf4j:slf4j-simple:1.7.25'
+}
+
+mainClassName = 'com.jayway.blockchain.server.Server'
