@@ -1,0 +1,253 @@
+{
+	"info": {
+		"_postman_id": "4d37a1b3-97ff-4d9e-9431-4f755fcc42f8",
+		"name": "jayway-blockchain",
+		"description": "This is a collection of requests to the local blockchain server.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "New Transaction",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "sender",
+							"value": "me",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "receiver",
+							"value": "you",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "data",
+							"value": "Some data",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5050/transactions",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5050",
+					"path": [
+						"transactions"
+					]
+				},
+				"description": "Pushes a new transaction to the local cache. Note that the transaction will only be added to the blockchain when the next block is mined."
+			},
+			"response": []
+		},
+		{
+			"name": "Pending Transactions",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "sender",
+							"value": "me",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "receiver",
+							"value": "you",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "data",
+							"value": "Some data",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5050/transactions",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5050",
+					"path": [
+						"transactions"
+					]
+				},
+				"description": "Retrieves all pending transactions. These will be added to the next block."
+			},
+			"response": []
+		},
+		{
+			"name": "Next Block",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "sender",
+							"value": "me",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "receiver",
+							"value": "you",
+							"description": "",
+							"type": "text"
+						},
+						{
+							"key": "data",
+							"value": "Some more message",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5050/block",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5050",
+					"path": [
+						"block"
+					]
+				},
+				"description": "Starts mining for the next block. This block will include all currently cached transactions."
+			},
+			"response": []
+		},
+		{
+			"name": "Blockchain",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "http://localhost:5050/blockchain",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5050",
+					"path": [
+						"blockchain"
+					]
+				},
+				"description": "Shows the current state of the blockchain. Pending transactions are not included."
+			},
+			"response": []
+		},
+		{
+			"name": "New Peer",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "address",
+							"value": "http://192.168.1.12:5050",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5050/nodes",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5050",
+					"path": [
+						"nodes"
+					]
+				},
+				"description": "Registers a peer node."
+			},
+			"response": []
+		},
+		{
+			"name": "Peer",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "address",
+							"value": "http://192.168.1.12:5050",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5050/nodes",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5050",
+					"path": [
+						"nodes"
+					]
+				},
+				"description": "Unregisters a peer node."
+			},
+			"response": []
+		},
+		{
+			"name": "Peers",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "address",
+							"value": "http://192.168.1.12:5050",
+							"description": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5050/nodes",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5050",
+					"path": [
+						"nodes"
+					]
+				},
+				"description": "Returns all registered peer nodes."
+			},
+			"response": []
+		}
+	]
+}
