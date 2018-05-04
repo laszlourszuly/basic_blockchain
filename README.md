@@ -87,5 +87,5 @@ For each peer node:
 
 1. Favor the longest chain, or your own if equally long.
 1. Verify for each block in the chain that
-  1. The nonce produces a hash string that starts with "00"
-  1. The produced hash it the same as the "prevHash" field in the next block
+    1. The nonce produces a hash string that starts with "00"
+    1. The produced hash it the same as the "prevHash" field in the next block
