@@ -1,7 +1,7 @@
 package com.jayway.blockchain.server;
 
-import com.jayway.blockchain.blockchain.Block;
-import com.jayway.blockchain.blockchain.Chain;
+import com.jayway.blockchain.Block;
+import com.jayway.blockchain.Blockchain;
 
 import java.lang.Exception;
 import java.lang.String;
@@ -42,11 +42,11 @@ public class Server {
     }
 
 
-    private final Chain blockchain;
+    private final Blockchain blockchain;
     private final Set<String> nodes;
 
     private Server() {
-        blockchain = new Chain();
+        blockchain = new Blockchain();
         nodes = new HashSet<>();
     }
 

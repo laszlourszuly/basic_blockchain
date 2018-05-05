@@ -1,4 +1,4 @@
-package com.jayway.blockchain.blockchain;
+package com.jayway.blockchain;
 
 import java.lang.IllegalArgumentException;
 import java.lang.IllegalStateException;
@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *  This class represents our blockchain, exposing means of recording new
  *  transactions and generating new blocks.
  */
-public class Chain {
+public class Blockchain {
     private static final String DIFFICULTY = "00";    
 
     private final List<Block> blocks;
@@ -38,7 +38,7 @@ public class Chain {
      *  Prepares a new instance of a blockchain. Each instance will have its
      *  genesis block generated and populated.
      */
-    public Chain() {
+    public Blockchain() {
         blocks = new ArrayList<>();
         transactions = new ArrayList<>();
         workerService = Executors.newSingleThreadExecutor();

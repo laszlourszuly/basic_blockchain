@@ -1,4 +1,4 @@
-package com.jayway.blockchain.blockchain;
+package com.jayway.blockchain;
 
 import java.lang.IllegalArgumentException;
 import java.lang.String;
