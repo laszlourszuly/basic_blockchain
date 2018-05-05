@@ -3,8 +3,8 @@ package com.jayway.blockchain.server;
 import com.jayway.blockchain.blockchain.Block;
 import com.jayway.blockchain.blockchain.Chain;
 
-import java.lang.String;
 import java.lang.Exception;
+import java.lang.String;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -34,7 +34,7 @@ public class Server {
                         .post(() -> instance.recordTransaction(context))))
                 .path("nodes", context -> context
                     .byMethod(method -> method
-                        .get(() -> instance.renderNodes(context))
+                        .get(() -> instance.serveNodes(context))
                         .post(() -> instance.registerNode(context))
                         .delete(() -> instance.unregisterNode(context))
                 ))
@@ -57,9 +57,7 @@ public class Server {
             // of the blockchain has already changed considerably by then.
             // In a real world scenario a significant amount of maths and
             // science would be thrown on this timeout.
-            serveSuccess(context, blockchain
-                    .mine()
-                    .get(40, TimeUnit.SECONDS));
+            serveSuccess(context, blockchain.mine().get(40, TimeUnit.SECONDS));
         } catch (Exception e) {
             serveError(context, e);                 
         }
@@ -82,6 +80,8 @@ public class Server {
                 // Don't serve an error to the caller here,
                 // just ignore this peer and try with the next.
             }
+
+        serveSuccess(context);
     }
 
     private void servePendingTransactions(final Context context) {
@@ -99,26 +99,28 @@ public class Server {
                 serveSuccess(context);
             });
     }
-
-    private void renderNodes(final Context context) {
+    
+    private void serveNodes(final Context context) {
         serveSuccess(context, nodes);
-    }    
+    }
 
     private void registerNode(final Context context) {
         context
-            .parse(Form.class)
-            .then(formData -> {
-                nodes.add(formData.get("address"));
-                serveSuccess(context);
+            .parse(Jackson.jsonNode())
+            .map(node -> node.get("address").asText())
+            .then(peer -> {
+                nodes.add(peer);
+                serveSuccess(context, nodes);
             });
     }
-
+    
     private void unregisterNode(final Context context) {
         context
-            .parse(Form.class)
-            .then(formData -> {
-                nodes.remove(formData.get("address"));
-                serveSuccess(context);
+            .parse(Jackson.jsonNode())
+            .map(node -> node.get("address").asText())
+            .then(peer -> {
+                nodes.remove(peer);
+                serveSuccess(context, nodes);
             });
     }
 

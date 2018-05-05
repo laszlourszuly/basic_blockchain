@@ -34,28 +34,24 @@ Returns the current state of the local blockchain as a list of blocks.
 
 ### `POST /nodes`
 
-Registers a peer node which we can synchronize against, once requested to do so.
+Registers a peer node. On success, the response body MUST include a JSON list of all registered peers.
 
-| Form field    | Type          | Description                    |
-|:------------- |:------------- |:------------------------------ |
-| address       | String        | The peer URL to to register.   |
+| Query parameters     | Description                             |
+|:-------------------- |:--------------------------------------- |
+| address              | The peer URL to to register.            |
 
 ### `DELETE /nodes`
 
-Unregisters a peer node. We will no longer be able to synchronize against this peer.
+Unregisters a peer node.
 
-| Form field    | Type          | Description                    |
-|:------------- |:------------- |:------------------------------ |
-| address       | String        | The peer URL to to unregister. |
-
-### `GET /nodes`
-
-Returns the URL's of all currently registered peer nodes.
+| Query parameters     | Description                             |
+|:-------------------- |:--------------------------------------- |
+| address              | The peer URL to to unregister.          |
 
 
 ## The Blockchain Protocol
 
-Below the blockchain protocol is defined. Any clients must comply to it in their implementations. This version of the protocol doesn't offer any compliance verification on new nodes (nore does it describe how disoedience should be handled). It only describes the blockchain integrity tests.
+Below the blockchain protocol is defined. Any clients must comply to it in their implementations. This version of the protocol doesn't offer any compliance verification of peer nodes, nore does it describe how disobedience is handled. It only describes the blockchain integrity tests.
 
 ### The Transaction Model
 
@@ -75,20 +71,33 @@ The hash of a block is produced by passing the block header to the SHA-256 algor
 
 | Form field    | Type          | Description                     |
 |:------------- |:------------- |:------------------------------- |
-| index         | int           | The index of the block within the blockchain |
 | nonce         | long          | An arbitrary number that, when hashing the block header, produces a resulting hash string that starts with "00" |
+| difficulty    | int           | The number of required leading zeros int the produced hash string to consider the block to be solved |
 | timestamp     | long          | The Unix epoch millisecond precision timestamp for when the mining process was started |
 | prevHash      | String        | The hash string of the previous block header |
 | transactions  | Transaction[] | An ordered list of transactions being included in this block |
 
-### The Synchronization Algorithm
+### The Peer Propagation Algorithm
+
+1. Each node should persist (long term) a list of its immediate peers.
+1. On start-up, each node must register itself to all its peers.
+1. Each node must provide a list of its peer nodes in the registration response.
+1. A node may, but is not required to, add its remote peers ("peers of peers") to persistant storage.
+
+Tips for implementation:
+* More peers doesn't necessarily give you an advantage over less peers. The more peers you have the more time you will be spending synchronizing and verifying. On the other hand, having too few peers makes you vulnerable to getting isolated from the network if your (few) peers go offline. "Lagom" is best.
+* You may want to maintain your list of peers and favor those who are reasonably fast to respond over those who provide slower responses. This grooming may be required every now and then as network load and other circumstances may play in for shorter or longer periods of time.
+
+### The Verification Algorithm
 
 For each peer node:
 
 1. Favor the longest chain, or your own if equally long.
-1. Verify for each block in the chain that
-    1. The nonce produces a hash string that starts with "00"
-    1. The produced hash it the same as the "prevHash" field in the next block
+1. For each block in the chain requested from a peer, verify that:
+   1. The nonce produces a hash string that starts with correct amount of zeros.
+   1. The produced hash is the same as the "prevHash" field in the next block.
+
+If any single one of the described tests fail, the tested chain is discarded.
 
 
 ## Topics to Discuss
