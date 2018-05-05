@@ -90,11 +90,11 @@ public class Server {
 
     private void recordTransaction(final Context context) {
         context
-            .parse(Form.class)
-            .then(formData -> {
-                String sender = formData.get("sender");
-                String receiver = formData.get("receiver");
-                String data = formData.get("data");
+            .parse(Jackson.jsonNode())
+            .then(node -> {
+                String sender = node.get("sender").asText();
+                String receiver = node.get("receiver").asText();
+                String data = node.get("data").asText();
                 blockchain.record(sender, receiver, data);
                 serveSuccess(context);
             });
