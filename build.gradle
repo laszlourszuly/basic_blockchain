@@ -10,11 +10,18 @@ buildscript {
 apply plugin: 'io.ratpack.ratpack-java'
 
 repositories {
-  jcenter()
+    jcenter()
 }
 
 dependencies {
-  runtime 'org.slf4j:slf4j-simple:1.7.25'
+    runtime 'org.slf4j:slf4j-simple:1.7.25'
+    compile 'com.google.code.gson:gson:2.8.4'
+    compile 'com.squareup.okhttp3:okhttp:3.10.0'
+
 }
 
-mainClassName = 'com.jayway.blockchain.server.Server'
+run {
+    args = System.getenv('RATPACK_PORT') ?: []
+}
+
+mainClassName = 'com.jayway.blockchain.Server'

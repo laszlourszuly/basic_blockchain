@@ -21,7 +21,7 @@ public class Block {
                  final long timestamp,
                  final String previousHashString,
                  final List<Transaction> transactions) {
-                 
+
         this.index = index;
         this.nonce = nonce;
         this.timestamp = timestamp;

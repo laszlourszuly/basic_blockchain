@@ -11,7 +11,7 @@ import java.security.NoSuchAlgorithmException;
 /**
  *  This class offers convenience hashing methods.
  */
-public class HashUtils {
+public class HashHelper {
     private static final MessageDigest ALGORITHM;
 
     static {
@@ -27,27 +27,15 @@ public class HashUtils {
      *
      *  @param string   The string to hash.
      *
-     *  @return The resulting digested hash byte array.
+     *  @return The resulting digested hash expressed as a hex-string.
      */
-    public static byte[] hash(final String string) {
+    public static String hash(final String string) {
         if (string == null)
             throw new IllegalArgumentException("Invalid payload: " + string);
 
-        return ALGORITHM.digest(string.getBytes(StandardCharsets.UTF_8));
-    }
-    
-    /**
-     *  Converts a byte array to a corresponding hexadecimal based string.
-     *
-     *  @param string   The string to hash.
-     *
-     *  @return The hexadecimal notation of the hash result.
-     */
-    public static String convertToHexString(byte[] hash) {
-        if (hash == null)
-            throw new IllegalArgumentException("Invalid hash");
-
+        byte[] hash = ALGORITHM.digest(string.getBytes(StandardCharsets.UTF_8));
         StringBuilder stringBuilder = new StringBuilder();
+
         for(byte b : hash)
             stringBuilder.append(Integer.toHexString(0xFF & b));
 

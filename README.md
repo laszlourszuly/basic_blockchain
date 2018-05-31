@@ -22,11 +22,11 @@ Records a new transaction which will be included in the next block once it's min
 
 ### `GET /transactions`
 
-Returns all pending transactions which haven't been included in a block yet.
+Returns all pending transactions which haven't been included in a block yet. This endpoint is primarilly for debugging purpouses.
 
 ### `GET /block`
 
-Starts mining the next block from a snapshot of the currently pending transactions and either times out after 40 seconds or delivers the newly mined block (which then already is added internally to the local chain).
+Starts mining the next block from a snapshot of the currently pending transactions and either times out after 40 seconds or delivers the newly mined block (which internally has already been added to the local chain). This endpoint is primarilly for debugging purpouses. A new mining process is ideally started as soon as the former is finished or aborted by a peer node propagating a new block it has mined.
 
 ### `GET /blockchain`
 
@@ -34,19 +34,19 @@ Returns the current state of the local blockchain as a list of blocks.
 
 ### `POST /nodes`
 
-Registers a peer node. On success, the response body MUST include a JSON list of all registered peers.
+Registers a peer node. On success, the response body MUST include a JSON list of a sub set of at least [1..n] registered peer. 
 
-| Query parameters     | Description                             |
+| JSON attributes      | Description                             |
 |:-------------------- |:--------------------------------------- |
 | address              | The peer URL to to register.            |
 
 ### `DELETE /nodes`
 
-Unregisters a peer node.
+Unregisters a peer node. For the sake of completeness.
 
-| Query parameters     | Description                             |
+| JSON attributes      | Description                             |
 |:-------------------- |:--------------------------------------- |
-| address              | The peer URL to to unregister.          |
+| address              | The peer URL to unregister.          |
 
 
 ## The Blockchain Protocol
@@ -54,6 +54,8 @@ Unregisters a peer node.
 Below the blockchain protocol is defined. Any clients must comply to it in their implementations. This version of the protocol doesn't offer any compliance verification of peer nodes, nore does it describe how disobedience is handled. It only describes the blockchain integrity tests.
 
 ### The Transaction Model
+
+All nodes must propagate a received transaction to at least one peer. No node may keep duplicates of any transaction.
 
 | Form field    | Type          | Description                     |
 |:------------- |:------------- |:------------------------------- |
@@ -67,7 +69,9 @@ Below the blockchain protocol is defined. Any clients must comply to it in their
 
 The hash of a block is produced by passing the block header to the SHA-256 algorithm. The block header, in turn, is produced as a concatenated string exactly like so:
 
-    {index}{nonce}{timestamp}{prevHash}{transaction[0].id}{transaction[n-1].id}{transaction[n].id}
+    {index}{nonce}{timestamp}{prevHash}{transaction[0].id}{...}{transaction[n].id}
+
+Once a block is successfully mined (a nonce is found that produces enough leading zero's) the new block must be propagated to at least [1..n] peers. Once a block is received, as a result of a peer propagation, it must be validated. If valid; any ongoing mining process must be abandoned and the new block must be appended to the local chain. All transactions included in the received block must be removed from the internal cache.
 
 | Form field    | Type          | Description                     |
 |:------------- |:------------- |:------------------------------- |
@@ -79,9 +83,9 @@ The hash of a block is produced by passing the block header to the SHA-256 algor
 
 ### The Peer Propagation Algorithm
 
-1. Each node should persist (long term) a list of its immediate peers.
-1. On start-up, each node must register itself to all its peers.
-1. Each node must provide a list of its peer nodes in the registration response.
+1. Each node should persist (long term) a list of its known peers.
+1. On start-up, each node must register itself to at least one of its peers.
+1. Each node must provide a list of at least one of its peer nodes in the registration response body.
 1. A node may, but is not required to, add its remote peers ("peers of peers") to persistant storage.
 
 Tips for implementation:
