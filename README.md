@@ -29,7 +29,7 @@ Example request body:
 {
     "sender": "0x123456789ABCDEF",
     "receiver": "0xFEDCBA987654321",
-	"data": "Some text data for now"
+    "data": "Some text data for now"
 }
 ```
 
@@ -50,18 +50,18 @@ Serves all blocks starting with the block with the given index. If no index is p
 Example response body:
 ```
 [
-	{
-		"index": 13,
-		...
-	},
-	{
-		"index": 14,
-		...
-	},
-	{
-		"index": 15,
-		...
-	}
+    {
+        "index": 13,
+        ...
+    },
+    {
+        "index": 14,
+        ...
+    },
+    {
+        "index": 15,
+        ...
+    }
 ]
 ```
 
@@ -72,10 +72,10 @@ When a node has mined a new block it needs to immediately propagate it to some o
 After that the node must validate the block and append it to its own version of the blockchain. If there is a gap between the last block's index and the index of the new block, the node needs to request any missing nodes from it's peers (see the **/blocks [GET]** section above). More on the block data structure in part 2.
 
 Example request body:
-```json
+```
 {
-	"index": 16,
-	...
+    "index": 16,
+    ...
 }
 ```
 
@@ -97,14 +97,21 @@ Example request body:
 Example response body:
 ```json
 [
-	"http://192.168.1.12:5050",
-	"http://192.168.1.34.9000"
+    "http://192.168.1.12:5050",
+    "http://192.168.1.34.9000"
 ]
 ```
 
 ### `/nodes [DELETE]`
 
 Unregisters a peer node. For the sake of completeness.
+
+Example request body:
+```json
+{
+    "address": "http://192.168.1.2:5050"
+}
+```
 
 
 ## PART 2: The Blockchain Protocol
