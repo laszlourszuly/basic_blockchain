@@ -134,7 +134,7 @@ All nodes must propagate a received transaction to at least one peer. No node ma
 
 The hash of a block is produced by passing the block header to the SHA-256 algorithm. The block header, in turn, is produced as a concatenated string exactly like so:
 
-    {index}{nonce}{timestamp}{prevHash}{transaction[0].id}{...}{transaction[n].id}
+    {nonce}{index}{timestamp}{prevHash}{transaction[0].id}{...}{transaction[n].id}
 
 Once a block is successfully mined (a nonce is found that produces enough leading zero's) the new block must be propagated to at least [1..n] peers. Once a block is received, as a result of a peer propagation, it must be validated. If valid; any ongoing mining process must be abandoned and the new block must be appended to the local chain. All transactions included in the received block must be removed from the internal cache.
 

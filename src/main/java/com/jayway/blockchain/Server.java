@@ -29,7 +29,8 @@ public class Server {
                         .post(() -> impl.recordTransaction(context))))
                 .path("blocks", context -> context.byMethod(method -> method
                         .get(() -> impl.serveBlocks(context))
-                        .post(() -> impl.validateBlock(context))))
+                        .post(() -> impl.validateBlock(context))
+                        .put(() -> impl.debug_mineBlock(context))))
                 .path("nodes", context -> context.byMethod(method -> method
                         .get(() -> impl.debug_servePeers(context))
                         .post(() -> impl.registerPeer(context))
@@ -53,22 +54,23 @@ public class Server {
      * @param ratpackContext The context providing the request metrics.
      */
     private void serveBlocks(final Context ratpackContext) {
-        ratpackContext
-                .parse(Jackson.jsonNode())
-                .then(jsonNode -> {
-                    // Get all blocks on top of the one with the requested
-                    // index, or all blocks if no index is provided
-                    List<Block> blocks;
-                    if (jsonNode.has("index")) {
-                        int index = jsonNode.get("index").asInt();
-                        blocks = blockchain.getBlocks(index);
-                    } else {
-                        blocks = blockchain.getBlocks();
-                    }
+        String indexString = ratpackContext
+                .getRequest()
+                .getQueryParams()
+                .get("index");
 
-                    // Serve the blocks to the requester
-                    ratpackContext.render(Jackson.json(blocks));
-                });
+        // Get all blocks on top of the one with the requested
+        // index, or all blocks if no index is provided
+        List<Block> blocks;
+        if (indexString == null) {
+            blocks = blockchain.getBlocks();
+        } else {
+            int index = Integer.valueOf(indexString);
+            blocks = blockchain.getBlocks(index);
+        }
+
+        // Serve the blocks to the requester
+        ratpackContext.render(Jackson.json(blocks));
     }
 
     /**
@@ -83,33 +85,32 @@ public class Server {
      * @param ratpackContext The context providing the request metrics.
      */
     private void validateBlock(final Context ratpackContext) {
+        blockchain.stopMining();
         ratpackContext
                 .parse(Jackson.jsonNode())
                 .then(jsonNode -> {
                     // Release the HTTP request.
                     ratpackContext.getResponse().status(200).send();
 
+                    // Make sure this is a new block. If we already have it we
+                    // don't want to propagate it.
+                    String json = jsonNode.toString();
+                    Block block = BlockHelper.parseBlock(json);
+                    if (!blockchain.getBlocks(block.index).isEmpty())
+                        return;
+
                     // Propagate the new block in the network, regardles our
                     // internal state.
-                    String json = jsonNode.toString();
                     List<String> peers = NodeHelper.getSomePeers();
-
-                    peers.remove("http://" + ratpackContext
-                            .getRequest()
-                            .getRemoteAddress()
-                            .toString());
-
                     for (String peer : peers)
                         NetworkHelper.post(peer + "/blocks", json);
 
                     // Try to append the new block to our blockchain. A failure
                     // may be an indication on missing blocks. Fallback to a
                     // sync and then retry again.
-                    Block block = BlockHelper.parseBlock(json);
-                    if (!blockchain.appendBlocks(block)) {
+                    if (!blockchain.appendBlocks(block))
                         if (synchronizeBlockchain())
                             blockchain.appendBlocks(block);
-                    }
                 });
     }
 
@@ -120,10 +121,12 @@ public class Server {
      * boolean false.
      */
     private boolean synchronizeBlockchain() {
+        List<String> peers = NodeHelper.getSomePeers(1);
+        if (peers == null || peers.isEmpty())
+            return true;
+
         Block[] missingBlocks = BlockHelper.parseBlocks(
-                NetworkHelper.get(NodeHelper
-                        .getSomePeers(1)
-                        .get(0) + "/blocks"));
+                NetworkHelper.get(peers.get(0) + "/blocks"));
 
         return blockchain.appendBlocks(missingBlocks);
     }
@@ -229,6 +232,16 @@ public class Server {
     private void debug_servePeers(final Context ratpackContext) {
         List<String> peers = NodeHelper.getAllPeers();
         ratpackContext.render(Jackson.json(peers));
+    }
+
+    /**
+     * Manually starts a mining process if not already mining.
+     *
+     * @param ratpackContext The context providing the request metrics.
+     */
+    private void debug_mineBlock(final Context ratpackContext) {
+        blockchain.mine();
+        ratpackContext.getResponse().status(200).send();
     }
 
 }

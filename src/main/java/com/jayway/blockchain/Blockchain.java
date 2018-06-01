@@ -32,11 +32,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Blockchain {
     private static final String DIFFICULTY = "000";
 
-
     private final List<Block> blocks;
     private final List<Transaction> transactions;
     private final ExecutorService workerService;
     private final AtomicInteger nextBlockIndex;
+
+    private Future<Block> miningTask;
 
     /**
      * Prepares a new instance of a blockchain. Each instance will have its
@@ -82,58 +83,63 @@ public class Blockchain {
      * transaction cache and work with that. More transactions may be added
      * while we're mining, those won't be included in this block, however,
      * only the snapshot will.
-     *
-     * @return A future object tied to the enqueued mining job. The future will
-     * deliver the newly mined block once it's done. The caller can also use
-     * the future to cancel this particular job.
-     * @throws IllegalStateException if there are no transactions to build a
-     *                               new block from.
      */
-    public Future<Block> mine() {
-        return workerService
-                .submit(() -> {
-                    if (transactions.isEmpty() && !blocks.isEmpty())
-                        return null;
+    public void mine() {
+        if (miningTask != null && !miningTask.isDone())
+            return;
 
-                    int index = nextBlockIndex.getAndIncrement();
-                    Date date = new Date();
-                    String referenceHash = blocks.isEmpty() ? null :
-                            BlockHelper.hashBlock(blocks.get(index - 1));
-                    List<Transaction> content = new ArrayList<>(transactions);
+        miningTask = workerService.submit(() -> {
+            if (transactions.isEmpty() && !blocks.isEmpty())
+                return null;
 
-                    String rawHeader = BlockHelper.buildRawBlockHeader(
-                            index,
-                            date.getTime(),
-                            referenceHash,
-                            content);
+            // Collect block header details.
+            int index = nextBlockIndex.getAndIncrement();
+            Date timestamp = new Date();
+            String referenceHash = blocks.isEmpty() ? null : BlockHelper.hashBlock(blocks.get(index - 1));
+            List<Transaction> content = new ArrayList<>(transactions);
 
-                    long nonce = 0;
-                    String hashString = "";
-                    System.out.printf("Started mining at %s UTC\n", date.toString());
+            // Build the block header.
+            String rawHeader = BlockHelper.buildRawBlockHeader(
+                    index,
+                    date.getTime(),
+                    referenceHash,
+                    content);
 
-                    // Start looking for a nonce that, when added to the block
-                    // header, gives a hash hex string starting with "000".
-                    while (!hashString.startsWith(DIFFICULTY)) {
-                        hashString = BlockHelper.hashBlock(++nonce, rawHeader);
+            long nonce = 0;
+            String hashString = "";
+            System.out.printf("Started mining at %s UTC\n", date.toString());
 
-                        // Abort mining if cancelled.
-                        if (Thread.currentThread().isInterrupted())
-                            return null;
-                    }
+            // Start looking for a nonce that, when added to the block
+            // header, gives a hash hex string starting with "000".
+            while (!hashString.startsWith(DIFFICULTY)) {
+                hashString = BlockHelper.hashBlock(++nonce, rawHeader);
 
-                    System.out.printf("Found new block!\n\tDuration: %d\n\tIterations: %d\n",
-                            System.currentTimeMillis() - date.getTime(),
-                            nonce);
+                // Abort mining if cancelled.
+                if (Thread.currentThread().isInterrupted())
+                    return null;
+            }
 
-                    transactions.removeAll(content);
-                    Block newBlock = new Block(index,
-                            nonce,
-                            date.getTime(),
-                            referenceHash,
-                            content);
-                    blocks.add(newBlock);
-                    return newBlock;
-                });
+            System.out.printf("Found new block!\n\tDuration: %d\n\tIterations: %d\n",
+                    System.currentTimeMillis() - date.getTime(),
+                    nonce);
+
+            transactions.removeAll(content);
+            Block newBlock = new Block(index,
+                    nonce,
+                    date.getTime(),
+                    referenceHash,
+                    content);
+            blocks.add(newBlock);
+            return newBlock;
+        });
+    }
+
+    /**
+     * Aborts any ongoing mining.
+     */
+    public void stopMining() {
+        if (miningTask != null && !miningTask.isDone())
+            miningTask.cancel(true);
     }
 
     /**
@@ -179,17 +185,18 @@ public class Blockchain {
         // really continue where our blockchain ends. Don't add any blocks to
         // our chain until we have validated the entire set of candidates.
         Block lastBlock = blocks.get(blocks.size() - 1);
-        if (verifyIntegrity(lastBlock, candidates[0]))
+        if (verifyIntegrity(lastBlock, candidates[0])) {
             for (int i = 0, last = candidates.length - 1; i < last; i++)
                 if (!verifyIntegrity(candidates[i], candidates[i + 1]))
                     return false;
 
-        // Everything seems legit. Clean up our pending transactions
-        // accordingly.
-        blocks.addAll(Arrays.asList(candidates));
-        for (Block candidate : candidates)
-            for (Transaction transaction : candidate.transactions)
-                transactions.remove(transaction);
+            // Everything seems legit. Clean up our pending transactions
+            // accordingly.
+            blocks.addAll(Arrays.asList(candidates));
+            for (Block candidate : candidates)
+                for (Transaction transaction : candidate.transactions)
+                    transactions.remove(transaction);
+        }
 
         // Yeay!!!
         return true;
