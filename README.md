@@ -43,19 +43,12 @@ Example request body:
 
 Serves all blocks starting with the block with the given index. If no index is provided all blocks are served. If no block is found with a matching index (it hasn't been propagated to us yet), an empty array is served. More on the `block` data structure in part 2.
 
-Example request body:
-```json
-{
-    "index": 12
-}
-```
-
-| JSON field    | Type          | Description                                                  |
+| Query param   | Type          | Description                                                  |
 |:------------- |:------------- |:------------------------------------------------------------ |
 | index         | Integer       | The value of the "index" field of the first block to serve   |
 
 Example response body:
-```json
+```
 [
 	{
 		"index": 13,
@@ -93,6 +86,13 @@ Serves all peers of this node. This endpoint is intended for debugging purposes.
 ### `/nodes [POST]`
 
 This is the "handshake" endpoint between nodes. Node A calls this endpoint on node B. Node B then adds node A to it's list and responds to the request with some of its own peers. Then node B calls this endpoint on node A, which will respond with some of its peers, which in turn are collected by node B.
+
+Example request body:
+```json
+{
+    "address": "http://192.168.1.2:5050"
+}
+```
 
 Example response body:
 ```json
