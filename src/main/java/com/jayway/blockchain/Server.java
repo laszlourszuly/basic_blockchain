@@ -24,12 +24,12 @@ public class Server {
         Server impl = new Server();
 
         RatpackServer.start(server -> server.handlers(chain -> chain
-                .path("blocks", context -> context.byMethod(method -> method
-                        .get(() -> impl.serveBlocks(context))
-                        .post(() -> impl.validateBlock(context))))
                 .path("transactions", context -> context.byMethod(method -> method
                         .get(() -> impl.debug_servePendingTransactions(context))
                         .post(() -> impl.recordTransaction(context))))
+                .path("blocks", context -> context.byMethod(method -> method
+                        .get(() -> impl.serveBlocks(context))
+                        .post(() -> impl.validateBlock(context))))
                 .path("nodes", context -> context.byMethod(method -> method
                         .get(() -> impl.debug_servePeers(context))
                         .post(() -> impl.registerPeer(context))

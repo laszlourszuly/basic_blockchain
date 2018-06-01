@@ -1,57 +1,115 @@
 # Basic Blockchain
 
-This project showcases a very basic blockchain implementation. You build and run the web server with gradle by issuing:
+This project showcases a very basic blockchain implementation. The example implementation is built and run by issuing the below command from the terminal:
 
     gradle clean run
 
-and then you're free to call the HTTP endpoints with Postman, Curl or any other way you prefer. The server runs on `localhost:5050` by default.
+And then you're free to call the HTTP endpoints with Postman, Curl or any other way you prefer. The example server runs on `localhost:5050` by default.
 
-## The REST API
+## The Workshop
 
-Below the blockchain public API is described. Not all of the endpoints are required by the blockchain protocol, but to be able to easily follow what's going on, some events, like triggering a mining process, or synchronizing with any peer nodes, have been isolated to manual HTTP requests issued by the user.
+Doing the lab yourself you'll write everything from scratch in your preferred programming language, using your favorite tools. The blockchain protocol it self doesn't require neither Java nor Gradle. Choose with your heart.
 
-### `POST /transactions`
+The lab will focus on the proof-of-work implementation, also known as the "mining". Regarding transaction- and block propagation, as well as validation, we'll settle with the most basic implementation possible. These areas can involve advanced mathematics in a real-world implementation, hence, falling a bit outside the scope for now.
 
-Records a new transaction which will be included in the next block once it's mined.
+## PART 1: The REST API
 
-| Form field    | Type          | Description                    |
+Below the blockchain public API is described. You're expected to implement a web server that can respond to the described requests.
+
+### `/transactions [GET]`
+
+Returns all pending transactions which haven't been included in a block yet. This endpoint is for debugging purposes.
+
+### `/transactions [POST]`
+
+Temporarily caches a new transaction. The blockchain implementation will include it in the next block eventually in a future mining cycle. **Your blockchain implementation is required to unconditionally propagate any received transactions to some of its peers**, regardless its internal state.
+
+Example request body:
+```json
+{
+    "sender": "0x123456789ABCDEF",
+    "receiver": "0xFEDCBA987654321",
+	"data": "Some text data for now"
+}
+```
+
+| JSON field    | Type          | Description                    |
 |:------------- |:------------- |:------------------------------ |
 | sender        | String        | The id of the sending party.   |
 | receiver      | String        | The id of the receiving party. |
 | data          | String        | The data being sent.           |
 
-### `GET /transactions`
+### `/blocks [GET]`
 
-Returns all pending transactions which haven't been included in a block yet. This endpoint is primarilly for debugging purpouses.
+Serves all blocks starting with the block with the given index. If no index is provided all blocks are served. If no block is found with a matching index (it hasn't been propagated to us yet), an empty array is served. More on the `block` data structure in part 2.
 
-### `GET /block`
+Example request body:
+```json
+{
+    "index": 12
+}
+```
 
-Starts mining the next block from a snapshot of the currently pending transactions and either times out after 40 seconds or delivers the newly mined block (which internally has already been added to the local chain). This endpoint is primarilly for debugging purpouses. A new mining process is ideally started as soon as the former is finished or aborted by a peer node propagating a new block it has mined.
+| JSON field    | Type          | Description                                                  |
+|:------------- |:------------- |:------------------------------------------------------------ |
+| index         | Integer       | The value of the "index" field of the first block to serve   |
 
-### `GET /blockchain`
+Example response body:
+```json
+[
+	{
+		"index": 13,
+		...
+	},
+	{
+		"index": 14,
+		...
+	},
+	{
+		"index": 15,
+		...
+	}
+]
+```
 
-Returns the current state of the local blockchain as a list of blocks.
+### `/blocks [POST]`
 
-### `POST /nodes`
+When a node has mined a new block it needs to immediately propagate it to some of it's peers in the network through this endpoint. All nodes receiving a block through this endpoint **must continue to propagate the block**.
 
-Registers a peer node. On success, the response body MUST include a JSON list of a sub set of at least [1..n] registered peer. 
+After that the node must validate the block and append it to its own version of the blockchain. If there is a gap between the last block's index and the index of the new block, the node needs to request any missing nodes from it's peers (see the **/blocks [GET]** section above). More on the block data structure in part 2.
 
-| JSON attributes      | Description                             |
-|:-------------------- |:--------------------------------------- |
-| address              | The peer URL to to register.            |
+Example request body:
+```json
+{
+	"index": 16,
+	...
+}
+```
 
-### `DELETE /nodes`
+### `/nodes [GET]`
+
+Serves all peers of this node. This endpoint is intended for debugging purposes.
+
+### `/nodes [POST]`
+
+This is the "handshake" endpoint between nodes. Node A calls this endpoint on node B. Node B then adds node A to it's list and responds to the request with some of its own peers. Then node B calls this endpoint on node A, which will respond with some of its peers, which in turn are collected by node B.
+
+Example response body:
+```json
+[
+	"http://192.168.1.12:5050",
+	"http://192.168.1.34.9000"
+]
+```
+
+### `/nodes [DELETE]`
 
 Unregisters a peer node. For the sake of completeness.
 
-| JSON attributes      | Description                             |
-|:-------------------- |:--------------------------------------- |
-| address              | The peer URL to unregister.          |
 
+## PART 2: The Blockchain Protocol
 
-## The Blockchain Protocol
-
-Below the blockchain protocol is defined. Any clients must comply to it in their implementations. This version of the protocol doesn't offer any compliance verification of peer nodes, nore does it describe how disobedience is handled. It only describes the blockchain integrity tests.
+Below the blockchain protocol is defined. Any clients must comply to it in their implementations.
 
 ### The Transaction Model
 
