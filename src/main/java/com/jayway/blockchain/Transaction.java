@@ -26,26 +26,5 @@ public class Transaction {
         this.timestamp = timestamp;
     }
 
-    @Override
-    public boolean equals(Object other) {
-        if (other == null)
-            return false;
-
-        if (!(other instanceof Transaction))
-            return false;
-
-        Transaction otherTransaction = (Transaction) other;
-        return (hash == null) ?
-                otherTransaction.hash == null :
-                hash.equals(otherTransaction.hash);
-    }
-
-    @Override
-    public int hashCode() {
-        return hash != null ?
-                hash.hashCode() :
-                0;
-    }
-
 }
 

@@ -40,11 +40,25 @@ public class Server {
 
 
     private final Blockchain blockchain;
+    private final Blockchain.OnBlockMinedListener miningListener;
 
 
     // Hidden constructor
     private Server() {
         blockchain = new Blockchain();
+        miningListener = new Blockchain.OnBlockMinedListener() {
+            @Override
+            public void onBlockMined(final Block block) {
+                // Propagate the new block.
+                List<String> peers = NodeHelper.getSomePeers();
+                for (String peer : peers)
+                    NetworkHelper.post(peer + "/blocks", block);
+
+                // Maybe start mining again.
+                blockchain.mine(Server.this.miningListener);
+            }
+        };
+
         synchronizeBlockchain();
     }
 
@@ -78,32 +92,33 @@ public class Server {
      * the block seems valid, it will be appended to our blockchain. If not,
      * we will request any potentially missing blocks from one of our peers. If
      * the new block still isn't valid it will be discarded, otherwise appended
-     * to our now complete blockchain. When a block is added, any corresponding
-     * transactions will be removed from our pending transactions list. Any
-     * ongoing mining process will be canceled.
+     * to our now complete blockchain. When a block is added to the blockchain,
+     * any corresponding transactions will be removed from our transactions
+     * cache. Any ongoing mining process will be canceled.
      *
      * @param ratpackContext The context providing the request metrics.
      */
     private void validateBlock(final Context ratpackContext) {
+        // Stop mining
         blockchain.stopMining();
+
         ratpackContext
                 .parse(Jackson.jsonNode())
                 .then(jsonNode -> {
                     // Release the HTTP request.
                     ratpackContext.getResponse().status(200).send();
 
-                    // Make sure this is a new block. If we already have it we
-                    // don't want to propagate it.
+                    // If we already have this block in our blockchain we
+                    // don't want to propagate it (to avoid resonance).
                     String json = jsonNode.toString();
                     Block block = BlockHelper.parseBlock(json);
                     if (!blockchain.getBlocks(block.index).isEmpty())
                         return;
 
-                    // Propagate the new block in the network, regardles our
-                    // internal state.
+                    // We don't have this block; propagate it in the network.
                     List<String> peers = NodeHelper.getSomePeers();
                     for (String peer : peers)
-                        NetworkHelper.post(peer + "/blocks", json);
+                        NetworkHelper.post(peer + "/blocks", block);
 
                     // Try to append the new block to our blockchain. A failure
                     // may be an indication on missing blocks. Fallback to a
@@ -144,24 +159,24 @@ public class Server {
                     // Release the HTTP request.
                     ratpackContext.getResponse().status(200).send();
 
-                    // Propagate further, regardles our internal state.
-                    String json = jsonNode.toString();
-                    List<String> peers = NodeHelper.getSomePeers();
-
-                    peers.remove("http://" + ratpackContext
-                            .getRequest()
-                            .getRemoteAddress()
-                            .toString());
-
-                    for (String peer : peers)
-                        NetworkHelper.post(peer + "/transactions", json);
-
-                    // Cache (blockchain will reject duplicates).
-                    blockchain.record(
+                    // Cache next transaction. Don't propagate things we already
+                    // have in our cache (to avoid resonance).
+                    if (!blockchain.record(
                             jsonNode.get("sender").asText(),
                             jsonNode.get("receiver").asText(),
                             jsonNode.get("data").asText(),
-                            jsonNode.get("timestamp").asLong());
+                            jsonNode.get("timestamp").asLong()))
+                        return;
+
+                    // We have cached the transaction, propagate further.
+                    String json = jsonNode.toString();
+                    List<String> peers = NodeHelper.getSomePeers();
+                    for (String peer : peers)
+                        NetworkHelper.post(peer + "/transactions", json);
+
+                    // Start mining if we aren't already and if there are
+                    // any transactions to mine.
+                    blockchain.mine(miningListener);
                 });
     }
 
@@ -177,10 +192,7 @@ public class Server {
                 .parse(Jackson.jsonNode())
                 .then(jsonNode -> {
                     // Get the address of the node that want's to register.
-                    String peer = "http://" + ratpackContext
-                            .getRequest()
-                            .getRemoteAddress()
-                            .toString();
+                    String peer = jsonNode.get("address").asText();
 
                     // Respond with some of our peers.
                     List<String> someOfMyPeers = NodeHelper.getSomePeers();
@@ -240,7 +252,7 @@ public class Server {
      * @param ratpackContext The context providing the request metrics.
      */
     private void debug_mineBlock(final Context ratpackContext) {
-        blockchain.mine();
+        blockchain.mine(miningListener);
         ratpackContext.getResponse().status(200).send();
     }
 

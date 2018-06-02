@@ -21,7 +21,7 @@ dependencies {
 }
 
 run {
-    args = System.getenv('RATPACK_PORT') ?: []
+    args "http://localhost:${System.getenv('RATPACK_PORT') ?: 5050}"
 }
 
 mainClassName = 'com.jayway.blockchain.Server'

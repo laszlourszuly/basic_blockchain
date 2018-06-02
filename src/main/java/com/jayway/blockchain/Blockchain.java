@@ -32,12 +32,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Blockchain {
     private static final String DIFFICULTY = "000";
 
+    public interface OnBlockMinedListener {
+        void onBlockMined(final Block block);
+    }
+
     private final List<Block> blocks;
     private final List<Transaction> transactions;
     private final ExecutorService workerService;
     private final AtomicInteger nextBlockIndex;
 
     private Future<Block> miningTask;
+
 
     /**
      * Prepares a new instance of a blockchain. Each instance will have its
@@ -61,17 +66,18 @@ public class Blockchain {
      * @throws IllegalArgumentException if any of the required data is null
      *                                  or empty.
      */
-    public void record(final String from,
-                       final String to,
-                       final String data,
-                       final long timestamp) throws IllegalArgumentException {
+    public boolean record(final String from,
+                          final String to,
+                          final String data,
+                          final long timestamp) throws IllegalArgumentException {
 
         Transaction transaction = TransactionHelper.create(from, to, data, timestamp);
         for (Transaction t : transactions)
             if (transaction.hash.equals(t.hash))
-                return;
+                return false;
 
         transactions.add(transaction);
+        return true;
     }
 
     /**
@@ -83,14 +89,27 @@ public class Blockchain {
      * transaction cache and work with that. More transactions may be added
      * while we're mining, those won't be included in this block, however,
      * only the snapshot will.
+     *
+     * @param listener Optional task to execute once a new block is mined.
      */
-    public void mine() {
-        if (miningTask != null && !miningTask.isDone())
+    public void mine(final OnBlockMinedListener listener) {
+        // No transactions to mine.
+        if (transactions.isEmpty()) {
+            System.out.printf("Denied mining request: No pending transactions\n");
             return;
+        }
+
+        // Already mining
+        if (miningTask != null && !miningTask.isDone()) {
+            System.out.printf("Denied mining request: Already mining\n");
+            return;
+        }
 
         miningTask = workerService.submit(() -> {
-            if (transactions.isEmpty() && !blocks.isEmpty())
+            if (transactions.isEmpty()) {
+                System.out.printf("Abort mining: No transactions to mine\n");
                 return null;
+            }
 
             // Collect block header details.
             int index = nextBlockIndex.getAndIncrement();
@@ -98,48 +117,54 @@ public class Blockchain {
             String referenceHash = blocks.isEmpty() ? null : BlockHelper.hashBlock(blocks.get(index - 1));
             List<Transaction> content = new ArrayList<>(transactions);
 
-            // Build the block header.
+            // Build the static part of the block header.
             String rawHeader = BlockHelper.buildRawBlockHeader(
                     index,
-                    date.getTime(),
+                    timestamp.getTime(),
                     referenceHash,
                     content);
 
             long nonce = 0;
             String hashString = "";
-            System.out.printf("Started mining at %s UTC\n", date.toString());
+            System.out.printf("Started mining at %s UTC\n", timestamp.toString());
 
-            // Start looking for a nonce that, when added to the block
-            // header, gives a hash hex string starting with "000".
-            while (!hashString.startsWith(DIFFICULTY)) {
+            // Start looking for a nonce that will produce a hash with the
+            // expected amount of leading zeros.
+            while (!hashString.startsWith(DIFFICULTY))
                 hashString = BlockHelper.hashBlock(++nonce, rawHeader);
 
-                // Abort mining if cancelled.
-                if (Thread.currentThread().isInterrupted())
-                    return null;
-            }
-
             System.out.printf("Found new block!\n\tDuration: %d\n\tIterations: %d\n",
-                    System.currentTimeMillis() - date.getTime(),
+                    System.currentTimeMillis() - timestamp.getTime(),
                     nonce);
 
+            // We have a new block! Remove the included transactions from the
+            // cache and append the new block to our blockchain.
             transactions.removeAll(content);
             Block newBlock = new Block(index,
                     nonce,
-                    date.getTime(),
+                    timestamp.getTime(),
                     referenceHash,
                     content);
+
             blocks.add(newBlock);
+            miningTask = null;
+
+            // Execute any provided post-mining task.
+            if (listener != null)
+                listener.onBlockMined(newBlock);
+
             return newBlock;
         });
     }
 
     /**
-     * Aborts any ongoing mining.
+     * Stops any ongoing mining.
      */
     public void stopMining() {
-        if (miningTask != null && !miningTask.isDone())
+        if (miningTask != null && !miningTask.isDone()) {
             miningTask.cancel(true);
+            miningTask = null;
+        }
     }
 
     /**
@@ -190,8 +215,8 @@ public class Blockchain {
                 if (!verifyIntegrity(candidates[i], candidates[i + 1]))
                     return false;
 
-            // Everything seems legit. Clean up our pending transactions
-            // accordingly.
+            // Everything seems legit. Update our blockchain and clean up the
+            // pending transactions accordingly.
             blocks.addAll(Arrays.asList(candidates));
             for (Block candidate : candidates)
                 for (Transaction transaction : candidate.transactions)
@@ -245,6 +270,9 @@ public class Blockchain {
         // Validate link
         if (!BlockHelper.hashBlock(reference).equals(candidate.previousHashString))
             return false;
+
+        // NOTE! that we don't validate the transactions in the candidate block.
+        // This while the developer is lazy and a disgrace to the trade.
 
         return true;
     }
